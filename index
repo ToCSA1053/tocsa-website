@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>ToCSA Website</title>
+</head>
+<body>
+  <h1>ToCSA Website</h1>
+  <ul>
+    <li><a href="co2-reduce.html">CO2削減デモ</a></li>
+    <li><a href="flowchart.html">フローチャート診断</a></li>
+  </ul>
+</body>
+</html>
