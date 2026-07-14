@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>トコサの水やり場 - あなたの声でトコサを育てよう！</title>
+  <style>
+    :root {
+      --primary-text: #2C2C2B;
+      --secondary-text: #7D7A75;
+      --canvas: #FFFFFF;
+      --soft-surface: #F9F8F7;
+      --border: #E6E5E3;
+      --primary-accent: #46A171; /* ToCSAグリーン */
+      --primary-accent-soft: #E8F1EC;
+      --orange-accent: #D5803B;
+      --orange-accent-soft: #FBEBDE;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    body {
+      background-color: #F0EFED;
+      color: var(--primary-text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 10px;
+    }
+
+    /* スマホ画面を模したコンテナ */
+    .phone-container {
+      width: 100%;
+      max-width: 410px;
+      height: 92vh;
+      max-height: 840px;
+      background-color: var(--canvas);
+      border-radius: 40px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+      border: 10px solid #2C2C2B;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* ステータスバー（スマホ風） */
+    .status-bar {
+      height: 40px;
+      background-color: var(--canvas);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 24px 0 24px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--primary-text);
+      z-index: 10;
+    }
+
+    /* ヘッダー */
+    .app-header {
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background-color: var(--canvas);
+      z-index: 10;
+    }
+
+    .back-btn {
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: var(--primary-text);
+      display: none; /* 初期状態（1ページ目）は非表示 */
+      width: 32px;
+      height: 32px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+    }
+
+    .back-btn:hover {
+      background-color: var(--soft-surface);
+    }
+
+    .app-header h1 {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    /* スライド遷移用ラッパー */
+    .screen-slider {
+      flex: 1;
+      display: flex;
+      width: 200%; /* 2画面分 */
+      height: calc(100% - 80px); /* ヘッダーとフッター分を除いた高さを固定 */
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      background-color: var(--soft-surface);
+    }
+
+    /* 各画面共通のスタイル */
+    .screen {
+      width: 50%; /* 1画面分 */
+      height: 100%;
+      overflow-y: scroll; /* 縦スクロールを明示的に有効化 */
+      -webkit-overflow-scrolling: touch; /* iOSでのスクロールを滑らかに */
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* スクロールバーは表示しつつ、邪魔にならない細さに */
+    .screen::-webkit-scrollbar {
+      width: 4px;
+    }
+    .screen::-webkit-scrollbar-thumb {
+      background-color: rgba(0, 0, 0, 0.1);
+      border-radius: 2px;
+    }
+
+    /* --- STEP 1: カテゴリ選択画面 --- */
+    .intro-card {
+      background-color: var(--canvas);
+      padding: 18px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+    }
+
+    .intro-card h2 {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: var(--primary-accent);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .intro-card p {
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: var(--secondary-text);
+    }
+
+    .category-card {
+      background-color: var(--canvas);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .category-card:hover {
+      border-color: var(--primary-accent);
+      transform: translateY(-1px);
+    }
+
+    .category-icon {
+      font-size: 22px;
+      width: 40px;
+      height: 40px;
+      background-color: var(--soft-surface);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .category-details {
+      flex: 1;
+    }
+
+    .category-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--primary-text);
+    }
+
+    .category-summary {
+      font-size: 11px;
+      color: var(--secondary-text);
+      margin-top: 3px;
+      line-height: 1.4;
+    }
+
+    .arrow-indicator {
+      font-size: 14px;
+      color: var(--border);
+    }
+
+    /* --- STEP 2: 詳細入力画面 --- */
+    .form-section-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--primary-text);
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 8px;
+      margin-bottom: 4px;
+    }
+
+    .dynamic-form-panel {
+      display: none; /* JSで選択されたカテゴリだけ表示 */
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .dynamic-form-panel.active {
+      display: flex;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-group label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--primary-text);
+    }
+
+    .form-group label span.required {
+      color: var(--orange-accent);
+      font-size: 10px;
+      margin-left: 4px;
+      background-color: var(--orange-accent-soft);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
+    .text-input, .select-input, .textarea-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 13px;
+      color: var(--primary-text);
+      outline: none;
+      background-color: var(--canvas);
+    }
+
+    .text-input:focus, .select-input:focus, .textarea-input:focus {
+      border-color: var(--primary-accent);
+    }
+
+    /* サブ入力グループ */
+    .sub-form-group {
+      background-color: var(--canvas);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      animation: slideDown 0.2s ease-out;
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* システムの繋がりを説明するインフォボックス */
+    .system-info-box {
+      background-color: #E5F2FC;
+      border-left: 4px solid #2783DE;
+      padding: 10px 12px;
+      border-radius: 4px 10px 10px 4px;
+      font-size: 11px;
+      line-height: 1.5;
+      color: #2783DE;
+    }
+
+    /* 地図風プレビュー */
+    .map-preview {
+      height: 130px;
+      background-color: #e0f2f1;
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .map-preview-bg {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at center, #c8e6c9 10%, transparent 10.5%),
+                  linear-gradient(45deg, #e8f5e9 25%, transparent 25%),
+                  linear-gradient(-45deg, #e8f5e9 25%, transparent 25%);
+      background-size: 30px 30px;
+      opacity: 0.7;
+    }
+
+    .map-preview-pin {
+      font-size: 28px;
+      position: relative;
+      z-index: 2;
+      animation: bounce 1s infinite alternate;
+    }
+
+    @keyframes bounce {
+      from { transform: translateY(0); }
+      to { transform: translateY(-8px); }
+    }
+
+    .gps-btn {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      background-color: var(--canvas);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* チップ風・グリッド */
+    .chip-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .chip-item {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      text-align: center;
+      cursor: pointer;
+      background-color: var(--canvas);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: all 0.2s;
+    }
+
+    .chip-item input[type="radio"], .chip-item input[type="checkbox"] {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .chip-item:hover {
+      border-color: var(--primary-accent);
+    }
+
+    .chip-item:has(input:checked) {
+      border-color: var(--primary-accent);
+      background-color: var(--primary-accent-soft);
+      color: var(--primary-accent);
+      box-shadow: 0 0 0 1px var(--primary-accent);
+    }
+
+    /* コネクター協力エリア */
+    .connector-banner {
+      background-color: var(--orange-accent-soft);
+      border: 1px dashed var(--orange-accent);
+      border-radius: 14px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .connector-banner-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--orange-accent);
+    }
+
+    .connector-option {
+      background-color: var(--canvas);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 11px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      line-height: 1.4;
+      transition: all 0.2s;
+    }
+
+    .connector-option:has(input:checked) {
+      border-color: var(--orange-accent);
+      background-color: #FFF3E0;
+    }
+
+    .connector-option-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .connector-option input {
+      accent-color: var(--orange-accent);
+    }
+
+    /* 画像アップロードプレビューエリア */
+    .image-upload-box {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      background-color: var(--canvas);
+      transition: all 0.2s;
+    }
+
+    .image-upload-box:hover {
+      border-color: var(--primary-accent);
+      background-color: var(--primary-accent-soft);
+    }
+
+    .image-upload-icon {
+      font-size: 24px;
+      margin-bottom: 6px;
+    }
+
+    .image-upload-text {
+      font-size: 11px;
+      color: var(--secondary-text);
+    }
+
+    /* 注意書き免責事項 */
+    .notice-box {
+      background-color: #FFF9E6;
+      border: 1px solid #FFE0B2;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 10.5px;
+      line-height: 1.5;
+      color: #E65100;
+    }
+
+    /* 送信・アクションエリア */
+    .form-actions {
+      margin-top: 10px;
+      margin-bottom: 30px;
+    }
+
+    .submit-button {
+      width: 100%;
+      background-color: var(--primary-accent);
+      color: var(--canvas);
+      border: none;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(70, 161, 113, 0.2);
+    }
+
+    /* スマホホームバー */
+    .app-footer-indicator {
+      height: 30px;
+      background-color: var(--canvas);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding-bottom: 10px;
+      z-index: 10;
+    }
+
+    .indicator-bar {
+      width: 130px;
+      height: 5px;
+      background-color: #000000;
+      border-radius: 2.5px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="phone-container">
+    <!-- スマホステータスバー -->
+    <div class="status-bar">
+      <span>16:27</span>
+      <span style="font-size: 14px;">📶 🔋</span>
+    </div>
+
+    <!-- アプリヘッダー：タイトルは「トコサの水やり場」のまま上部に固定表示 -->
+    <header class="app-header">
+      <button class="back-btn" id="headerBackBtn" onclick="goBack()">←</button>
+      <h1 id="headerTitle">トコサの水やり場</h1>
+    </header>
+
+    <!-- 画面スライダー -->
+    <div class="screen-slider" id="screenSlider">
+      
+      <!-- ================= STEP 1: 投稿の種類（カテゴリ）選択 ================= -->
+      <div class="screen" id="screenStep1">
+        <div class="intro-card">
+          <!-- H2タイトル：「トコサをみんなで育てよう！」、説明文をリクエストに合わせて変更 -->
+          <h2 id="step1Title">トコサをみんなで育てよう！</h2>
+          <p id="step1Desc">トコサはみんなで育てるあなたのまちの地産地消プラットフォームです。「ここで受け渡しできるかも」「こんな商品があったらいいな」など、トコサを育てるためのご要望・ご意見等をお寄せください！</p>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 12px; padding-bottom: 20px;">
+          <!-- カテゴリ 1 -->
+          <div class="category-card" onclick="selectCategory('location', '📍 受け渡し場所（結ステーション）の要望・紹介')">
+            <div class="category-icon" style="color: #E56458; background-color: #FCE9E7;">📍</div>
+            <div class="category-details">
+              <div class="category-title">受け渡し場所の要望・紹介</div>
+              <div class="category-summary">「このあたりに結ステがほしい」「あそこが協力してくれそう」</div>
+            </div>
+            <div class="arrow-indicator">➔</div>
+          </div>
+
+          <!-- カテゴリ 2 -->
+          <div class="category-card" onclick="selectCategory('product', '🔁 商品リクエスト')">
+            <div class="category-icon" style="color: #D5803B; background-color: #FBEBDE;">🔁</div>
+            <div class="category-details">
+              <div class="category-title">商品リクエスト</div>
+              <div class="category-summary">「あのイチゴをもう一度食べたい！」「新しい食材がほしい」</div>
+            </div>
+            <div class="arrow-indicator">➔</div>
+          </div>
+
+          <!-- カテゴリ 3 -->
+          <div class="category-card" onclick="selectCategory('community', '🌾 援農・交流リクエスト')">
+            <div class="category-icon" style="color: #46A171; background-color: #E8F1EC;">🌾</div>
+            <div class="category-details">
+              <div class="category-title">援農・交流リクエスト</div>
+              <div class="category-summary">「週末に農家さんのお手伝いに行きたい！」</div>
+            </div>
+            <div class="arrow-indicator">➔</div>
+          </div>
+
+          <!-- カテゴリ 4 -->
+          <div class="category-card" onclick="selectCategory('recipe', '🍳 料理の悩み・レシピ共有')">
+            <div class="category-icon" style="color: #2783DE; background-color: #E5F2FC;">🍳</div>
+            <div class="category-details">
+              <div class="category-title">料理の悩み・レシピ共有</div>
+              <div class="category-summary">「この野菜、どう料理する？」「こんな風に作ったら美味しかった！」</div>
+            </div>
+            <div class="arrow-indicator">➔</div>
+          </div>
+
+          <!-- カテゴリ 5 -->
+          <div class="category-card" onclick="selectCategory('app', '📱 アプリの改善要望')">
+            <div class="category-icon" style="color: #7D7A75; background-color: #F0EFED;">📱</div>
+            <div class="category-details">
+              <div class="category-title">アプリの改善要望</div>
+              <div class="category-summary">「ここが見づらい」「こんな機能がほしい」</div>
+            </div>
+            <div class="arrow-indicator">➔</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= STEP 2: 各カテゴリ詳細フォーム ================= -->
+      <div class="screen" id="screenStep2">
+        <form id="detailForm" onsubmit="event.preventDefault(); alert('トコサにお水をいただき、ありがとうございます！'); goBack();">
+          
+          <h2 class="form-section-title" id="formTitle">詳細の入力</h2>
+
+          <!-- 【パネル1: 📍受け渡し場所（結ステーション）の要望・紹介】 -->
+          <div class="dynamic-form-panel" id="panel-location">
+            <div class="form-group">
+              <label>希望する場所はどこですか？ <span class="required">必須</span></label>
+              <div class="map-preview">
+                <div class="map-preview-bg"></div>
+                <div class="map-preview-pin">📍</div>
+                <button type="button" class="gps-btn" onclick="alert('現在地を自動セットしました')">🎯 現在地をセット</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="locName">具体的な場所・建物名（任意）</label>
+              <input type="text" id="locName" class="text-input" placeholder="例：あおぞら保育園、〇〇株式会社 豊岡オフィス">
+            </div>
+
+            <div class="form-group">
+              <label>あなたとこの場所との関係は？</label>
+              <div class="chip-grid" id="locRelationGroup">
+                <label class="chip-item">
+                  <input type="radio" name="locRelation" value="employee" onchange="onLocationRelationChange(this)">
+                  💼 お勤め先・自社
+                </label>
+                <label class="chip-item">
+                  <input type="radio" name="locRelation" value="parent" onchange="onLocationRelationChange(this)">
+                  🏫 通う保育園・施設
+                </label>
+                <label class="chip-item">
+                  <input type="radio" name="locRelation" value="home" onchange="onLocationRelationChange(this)">
+                  🏠 自宅・所有地
+                </label>
+                <label class="chip-item">
+                  <input type="radio" name="locRelation" value="regular" onchange="onLocationRelationChange(this)">
+                  🛍️ よく行く店舗
+                </label>
+                <label class="chip-item">
+                  <input type="radio" name="locRelation" value="other" onchange="onLocationRelationChange(this)">
+                  ❓ その他
+                </label>
+              </div>
+            </div>
+
+            <!-- 「自宅・所有地」選択時のご相談案内 -->
+            <div class="sub-form-group" id="loc-home-consult" style="display: none; background-color: var(--primary-accent-soft); border-color: var(--primary-accent);">
+              <p style="font-size: 11.5px; line-height: 1.5; color: var(--primary-accent); font-weight: 600;">
+                💡 <strong>所有地・ご自宅の提案について</strong><br>
+                後日、あなたのメールアドレスにご相談のメールを送付させていただく場合がございます。
+              </p>
+            </div>
+
+            <!-- つなぎ役（紹介協力）の工夫 -->
+            <div class="connector-banner" id="loc-connector-banner" style="display: none;">
+              <div class="connector-banner-title">🤝 つなぎ役（ご紹介）のご協力</div>
+              <p style="font-size: 11.5px; line-height: 1.5; color: var(--primary-text);">
+                いつも通うあなたからの声は大きな力になります。ぜひつなぎ役（ご紹介）のご協力をお願いいたします。
+              </p>
+              
+              <!-- 選択肢 1 -->
+              <label class="connector-option" onclick="toggleConnectorDetails('talk')">
+                <div class="connector-option-header">
+                  <input type="radio" name="connectHelp" value="talk" id="radio-talk">
+                  <span>🏢 施設担当者に話してみる</span>
+                </div>
+                <div style="font-weight: normal; font-size: 10.5px; color: var(--secondary-text); margin-top: 4px; padding-left: 20px;">
+                  後ほど、簡単なトコサの案内資料をメールでお送りします。施設担当者にお渡しし、ご紹介いただけますと幸いです。
+                </div>
+              </label>
+
+              <!-- 選択肢 2 -->
+              <label class="connector-option" onclick="toggleConnectorDetails('share')">
+                <div class="connector-option-header">
+                  <input type="radio" name="connectHelp" value="share" id="radio-share">
+                  <span>📞 施設担当者の連絡先を共有する</span>
+                </div>
+                <div style="font-weight: normal; font-size: 10.5px; color: var(--secondary-text); margin-top: 4px; padding-left: 20px;">
+                  後日、運営からご連絡させていただきます。あなたからの紹介があった旨も伝えさせていただきます。
+                </div>
+              </label>
+
+              <!-- 連絡先共有フォーム -->
+              <div class="sub-form-group" id="connector-contact-fields" style="display: none; border-color: var(--orange-accent);">
+                <div class="form-group">
+                  <label for="yourName">ご回答者の氏名 <span class="required">必須</span></label>
+                  <input type="text" id="yourName" class="text-input" placeholder="例：山田 太郎">
+                </div>
+                <div class="form-group">
+                  <label for="targetContact">施設担当者の連絡先（電話またはメール） <span class="required">必須</span></label>
+                  <input type="text" id="targetContact" class="text-input" placeholder="例：090-XXXX-XXXX, info@example.com">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 【パネル2: 🔁商品リクエスト】 -->
+          <div class="dynamic-form-panel" id="panel-product">
+            <div class="form-group">
+              <label>リクエスト対象</label>
+              <div class="chip-grid">
+                <label class="chip-item">
+                  <input type="radio" name="prodTarget" value="all" checked onchange="onProductTargetChange('all')">
+                  🌎 トコサ全体へ
+                </label>
+                <label class="chip-item">
+                  <input type="radio" name="prodTarget" value="specific" onchange="onProductTargetChange('specific')">
+                  👨‍🌾 特定の生産者さんへ
+                </label>
+              </div>
+            </div>
+
+            <!-- 特定の生産者の場合 -->
+            <div class="sub-form-group" id="prod-specific-group" style="display: none;">
+              <div class="form-group">
+                <label for="prodProducer">生産者さんを選択してください</label>
+                <select id="prodProducer" class="select-input">
+                  <option value="">生産者さんを選んでください</option>
+                  <option value="nakamura">但馬オーガニック農園（中村さん）</option>
+                  <option value="tanaka">丹後ファーム（田中さん）</option>
+                  <option value="maruichi">まるいち農園さん</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>リクエストの種類</label>
+              <div class="chip-grid" id="prodTypeGroup">
+                <label class="chip-item">
+                  <input type="radio" name="prodType" value="new" checked onchange="onProductTypeChange('new')">
+                  ✨ 新しい食材・食品
+                </label>
+                <label class="chip-item" id="chip-prod-repeat" style="display: none;">
+                  <input type="radio" name="prodType" value="repeat" onchange="onProductTypeChange('repeat')">
+                  🔁 過去商品のリピート希望
+                </label>
+              </div>
+            </div>
+
+            <!-- リピート希望の場合のみ表示 -->
+            <div class="sub-form-group" id="prod-repeat-group" style="display: none;">
+              <div class="form-group">
+                <label for="prodPastItems">過去の人気出品メニュー</label>
+                <select id="prodPastItems" class="select-input">
+                  <option value="">過去の出品から選ぶ</option>
+                  <option value="strawberry">完熟あきひめ（いちご）</option>
+                  <option value="onion">あまくて柔らかい新玉ねぎ</option>
+                  <option value="egg">平飼い有精卵（たまご）</option>
+                  <option value="other">その他（下のメッセージ欄へご記入ください）</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- 「新しい食材・食品」用 -->
+            <div class="form-group" id="prod-new-name-group">
+              <label for="prodName">ご希望の食材・商品 <span class="required">必須</span></label>
+              <input type="text" id="prodName" class="text-input" placeholder="例：無農薬のほうれん草、お弁当用のお惣菜">
+            </div>
+
+            <div class="form-group">
+              <label for="prodMessage">💌 メッセージ（任意）</label>
+              <textarea id="prodMessage" class="textarea-input" rows="3" placeholder="具体的な量や用途、生産者さんへの応援メッセージなどをご自由にお書きください。"></textarea>
+            </div>
+          </div>
+
+          <!-- 【パネル3: 🌾援農・交流リクエスト】 -->
+          <div class="dynamic-form-panel" id="panel-community">
+            <div class="form-group">
+              <label>リクエスト対象</label>
+              <div class="chip-grid">
+                <label class="chip-item">
+                  <input type="radio" name="commTarget" value="all" checked onchange="onCommunityTargetChange('all')">
+                  🌎 トコサ全体（募集待ち）
+                </label>
+                <label class="chip-item">
+                  <input type="radio" name="commTarget" value="specific" onchange="onCommunityTargetChange('specific')">
+                  👨‍🌾 特定の生産者さんへ
+                </label>
+              </div>
+            </div>
+
+            <!-- 特定の生産者の場合 -->
+            <div class="sub-form-group" id="comm-specific-group" style="display: none;">
+              <div class="form-group">
+                <label for="commProducer">生産者さんを選択してください</label>
+                <select id="commProducer" class="select-input">
+                  <option value="">生産者さんを選んでください</option>
+                  <option value="nakamura">但馬オーガニック農園（中村さん）</option>
+                  <option value="tanaka">丹後ファーム（田中さん）</option>
+                  <option value="maruichi">まるいち農園さん</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>リクエストの種類（複数選択可）</label>
+              <div class="chip-grid">
+                <label class="chip-item">
+                  <input type="checkbox" name="commType" value="weekend">
+                  📅 週末・休日に参加
+                </label>
+                <label class="chip-item">
+                  <input type="checkbox" name="commType" value="weekday">
+                  ⏰ 平日に参加
+                </label>
+                <label class="chip-item">
+                  <input type="checkbox" name="commType" value="heavy">
+                  💪 ガッツリ作業
+                </label>
+                <label class="chip-item">
+                  <input type="checkbox" name="commType" value="family">
+                  👦 子どもと一緒に体験
+                </label>
+                <label class="chip-item">
+                  <input type="checkbox" name="commType" value="other">
+                  ❓ その他
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="commText">詳しい希望内容（任意）</label>
+              <textarea id="commText" class="textarea-input" rows="3" placeholder="例：秋のじゃがいも収穫時期に家族3人で手伝いたいです。"></textarea>
+            </div>
+          </div>
+
+          <!-- 【パネル4: 🍳料理の悩み・レシピ共有】 -->
+          <div class="dynamic-form-panel" id="panel-recipe">
+            <div class="form-group">
+              <label>投稿テーマ</label>
+              <div class="chip-grid">
+                <label class="chip-item">
+                  <input type="radio" name="recipeTheme" value="trouble" checked onchange="onRecipeThemeChange('trouble')">
+                  ❓ 料理の悩み（どう料理したらいい？）
+                </label>
+                <label class="chip-item">
+                  <input type="radio" name="recipeTheme" value="good" onchange="onRecipeThemeChange('good')">
+                  🍳 レシピ共有（こう作ると美味しかった！）
+                </label>
+              </div>
+            </div>
+
+            <!-- 食材の指定 -->
+            <div class="form-group">
+              <label>どの食材に関する投稿ですか？</label>
+              <div class="chip-grid" style="margin-bottom: 8px;">
+                <label class="chip-item">
+                  <input type="radio" name="ingType" value="choose" checked onchange="onIngredientTypeChange('choose')">
+                  🛍️ トコサの商品から選ぶ
+                </label>
+                <label class="chip-item">
+                  <input type="radio" name="ingType" value="text" onchange="onIngredientTypeChange('text')">
+                  ✏️ 食材名を直接書く
+                </label>
+              </div>
+
+              <div class="sub-form-group" id="ing-choose-group">
+                <div style="display: flex; gap: 8px;">
+                  <select id="recipeProducer" class="select-input" style="flex: 1;">
+                    <option value="">生産者を選ぶ</option>
+                    <option value="nakamura">但馬オーガニック農園</option>
+                    <option value="maruichi">まるいち農園</option>
+                  </select>
+                  <select id="recipeProduct" class="select-input" style="flex: 1;">
+                    <option value="">商品を選ぶ</option>
+                    <option value="onion">新玉ねぎ</option>
+                    <option value="potato">じゃがいも</option>
+                  </select>
+                </div>
+              </div>
+
+              <div id="ing-text-group" style="display: none;">
+                <input type="text" id="recipeIngredientText" class="text-input" placeholder="例：鹿肉、原木しいたけ、間引き菜など">
+              </div>
+            </div>
+
+            <!-- 画像添付 -->
+            <div class="form-group" id="recipe-image-group" style="display: none;">
+              <label>📷 美味しそうな写真を追加（任意）</label>
+              <div class="image-upload-box" onclick="alert('画像の選択ダイアログを表示')">
+                <div class="image-upload-icon">📸</div>
+                <div class="image-upload-text">タップして写真をアップロードまたは撮影</div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label id="recipeTextLabel" for="recipeText">料理の悩み・聞きたいこと <span class="required">必須</span></label>
+              <textarea id="recipeText" class="textarea-input" rows="5" placeholder="例：どうやって保存すれば長持ちしますか？苦味を抑えて子どもが食べやすくする調理法はありますか？"></textarea>
+            </div>
+          </div>
+
+          <!-- 【パネル5: 📱アプリの改善要望】 -->
+          <div class="dynamic-form-panel" id="panel-app">
+            <div class="form-group">
+              <label>どのような内容ですか？</label>
+              <div class="chip-grid">
+                <label class="chip-item">
+                  <input type="radio" name="appRequestType" value="bug" checked>
+                  ⚠️ 不具合・バグ報告
+                </label>
+                <label class="chip-item">
+                  <input type="radio" name="appRequestType" value="idea">
+                  💡 新機能の提案
+                </label>
+                <label class="chip-item">
+                  <input type="radio" name="appRequestType" value="easy">
+                  👀 見づらい・使いづらい
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="appText">詳しい状況・ご提案内容 <span class="required">必須</span></label>
+              <textarea id="appText" class="textarea-input" rows="5" placeholder="「決済画面でエラーが出た」「商品お気に入り機能がほしい」など、お気づきの点を詳しく教えてください。"></textarea>
+            </div>
+          </div>
+
+          <!-- コモン：自由記入のコメント -->
+          <div class="form-group" style="margin-top: 10px;" id="common-comment-group">
+            <label for="commonComment">💬 補足メッセージ（任意）</label>
+            <textarea id="commonComment" class="textarea-input" rows="3" placeholder="その他に何かあれば、ご自由にご記入ください。"></textarea>
+          </div>
+
+          <!-- 注意書き -->
+          <div class="notice-box" id="noticeBox" style="margin-top: 15px;"></div>
+
+          <!-- ★修正：送信ボタンを「💧トコサにお水をあげる（送信）」に変更し、（送信）を小さく記述 -->
+          <div class="form-actions">
+            <button type="submit" class="submit-button">
+              💧トコサにお水をあげる<span style="font-size: 11px; font-weight: normal; margin-left: 4px; opacity: 0.9;">（送信）</span>
+            </button>
+          </div>
+
+        </form>
+      </div>
+
+    </div>
+
+    <!-- スマホホームバー -->
+    <div class="app-footer-indicator">
+      <div class="indicator-bar"></div>
+    </div>
+  </div>
+
+  <script>
+    const slider = document.getElementById('screenSlider');
+    const backBtn = document.getElementById('headerBackBtn');
+    const headerTitle = document.getElementById('headerTitle');
+    const noticeBox = document.getElementById('noticeBox');
+
+    // 注意書きのテキストマッピング
+    const noticeTexts = {
+      location: "⚠️ <strong>ご提案に関する注意事項</strong><br>ご提案いただいた場所や情報をもとに、運営チームが現地調査や交渉を進めます。特定の個人情報は交渉相手や外部に公開されることはありません。",
+      product: "⚠️ <strong>ご投稿に関する注意事項</strong><br>お寄せいただいたリクエストは匿名で生産者さまにお届けします。また、人気の高い商品リクエストはSNSやアプリ内の特集などで紹介・発信させていただく場合がございます。",
+      community: "⚠️ <strong>ご投稿に関する注意事項</strong><br>お寄せいただいたお手伝い希望は、生産者さまと調整のうえ、マッチングの募集情報やSNS等で個人を特定できない形で活用させていただく場合がございます。",
+      recipe: "⚠️ <strong>ご投稿に関する注意事項</strong><br>投稿いただいたお悩みやレシピ（写真含む）は、プロフィールで設定した【ニックネーム】とともに、トコサ公式SNSやアプリ内コンテンツにて紹介・発信させていただく場合がございます。",
+      app: "⚠️ <strong>不具合・ご意見に関する注意事項</strong><br>お寄せいただいた不具合やご意見は、サービス向上のための開発・分析にのみ使用し、外部に公開されることはありません。"
+    };
+
+    function selectCategory(categoryKey, categoryName) {
+      headerTitle.innerText = categoryName;
+      backBtn.style.display = 'flex';
+
+      const panels = document.querySelectorAll('.dynamic-form-panel');
+      panels.forEach(panel => panel.classList.remove('active'));
+
+      const targetPanel = document.getElementById(`panel-${categoryKey}`);
+      if (targetPanel) {
+        targetPanel.classList.add('active');
+      }
+
+      if (noticeTexts[categoryKey]) {
+        noticeBox.innerHTML = noticeTexts[categoryKey];
+        noticeBox.style.display = 'block';
+      } else {
+        noticeBox.style.display = 'none';
+      }
+
+      const commonComment = document.getElementById('common-comment-group');
+      if (categoryKey === 'app') {
+        commonComment.style.display = 'none';
+      } else {
+        commonComment.style.display = 'flex';
+      }
+
+      slider.style.transform = 'translateX(-50%)';
+      document.getElementById('screenStep2').scrollTop = 0;
+    }
+
+    function goBack() {
+      headerTitle.innerText = 'トコサの水やり場';
+      backBtn.style.display = 'none';
+      slider.style.transform = 'translateX(0)';
+      document.getElementById('screenStep1').scrollTop = 0;
+    }
+
+    function onLocationRelationChange(inputElement) {
+      const val = inputElement.value;
+      const homeConsult = document.getElementById('loc-home-consult');
+      if (val === 'home') {
+        homeConsult.style.display = 'block';
+      } else {
+        homeConsult.style.display = 'none';
+      }
+
+      const connectorBanner = document.getElementById('loc-connector-banner');
+      if (val === 'employee' || val === 'parent' || val === 'regular' || val === 'other') {
+        connectorBanner.style.display = 'flex';
+      } else {
+        connectorBanner.style.display = 'none';
+        document.querySelectorAll('input[name="connectHelp"]').forEach(radio => radio.checked = false);
+        document.getElementById('connector-contact-fields').style.display = 'none';
+      }
+    }
+
+    function toggleConnectorDetails(mode) {
+      const contactFields = document.getElementById('connector-contact-fields');
+      const radioTalk = document.getElementById('radio-talk');
+      const radioShare = document.getElementById('radio-share');
+
+      if (mode === 'talk') {
+        radioTalk.checked = true;
+        radioShare.checked = false;
+        contactFields.style.display = 'none';
+      } else if (mode === 'share') {
+        radioTalk.checked = false;
+        radioShare.checked = true;
+        contactFields.style.display = 'flex';
+      }
+    }
+
+    function onProductTargetChange(target) {
+      const specificGroup = document.getElementById('prod-specific-group');
+      const repeatChip = document.getElementById('chip-prod-repeat');
+
+      if (target === 'specific') {
+        specificGroup.style.display = 'flex';
+        repeatChip.style.display = 'flex';
+      } else {
+        specificGroup.style.display = 'none';
+        repeatChip.style.display = 'none';
+        const newRadio = document.querySelector('input[name="prodType"][value="new"]');
+        newRadio.checked = true;
+        onProductTypeChange('new');
+      }
+    }
+
+    function onProductTypeChange(type) {
+      const repeatGroup = document.getElementById('prod-repeat-group');
+      const prodNewGroup = document.getElementById('prod-new-name-group');
+
+      if (type === 'repeat') {
+        repeatGroup.style.display = 'flex';
+        prodNewGroup.style.display = 'none';
+      } else {
+        repeatGroup.style.display = 'none';
+        prodNewGroup.style.display = 'flex';
+      }
+    }
+
+    function onCommunityTargetChange(target) {
+      const specificGroup = document.getElementById('comm-specific-group');
+      if (target === 'specific') {
+        specificGroup.style.display = 'flex';
+      } else {
+        specificGroup.style.display = 'none';
+      }
+    }
+
+    function onRecipeThemeChange(theme) {
+      const imageGroup = document.getElementById('recipe-image-group');
+      const recipeTextLabel = document.getElementById('recipeTextLabel');
+      const recipeText = document.getElementById('recipeText');
+
+      if (theme === 'good') {
+        imageGroup.style.display = 'flex';
+        recipeTextLabel.innerHTML = 'おすすめのコツ・レシピ <span class="required">必須</span>';
+        recipeText.placeholder = '例：シンプルに塩胡椒で炒めるだけで甘みが引き立ちます！子供はチーズを乗せて焼くのがお気に入りです。';
+      } else {
+        imageGroup.style.display = 'none';
+        recipeTextLabel.innerHTML = '料理の悩み・聞きたいこと <span class="required">必須</span>';
+        recipeText.placeholder = '例：どうやって保存すれば長持ちしますか？苦味を抑えて子どもが食べやすくする調理法はありますか？';
+      }
+    }
+
+    function onIngredientTypeChange(type) {
+      const chooseGroup = document.getElementById('ing-choose-group');
+      const textGroup = document.getElementById('ing-text-group');
+      if (type === 'choose') {
+        chooseGroup.style.display = 'block';
+        textGroup.style.display = 'none';
+      } else {
+        chooseGroup.style.display = 'none';
+        textGroup.style.display = 'block';
+      }
+    }
+  </script>
+</body>
+</html>
